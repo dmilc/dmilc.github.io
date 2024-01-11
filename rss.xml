@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Bitsdraumar</title>
+      <link>https://www.bitsdraumar.is</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://www.bitsdraumar.is/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Fri, 18 Aug 2023 11:11:00 +0000</lastBuildDate>
+      <item>
+          <title>Benchmarking interpreter dispatch: part 1</title>
+          <pubDate>Fri, 18 Aug 2023 11:11:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/</link>
+          <guid>https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/</guid>
+          <description>&lt;p&gt;In this series we will be analyzing and evaluating various interpreter dispatch techniques and their performance characteristics.&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

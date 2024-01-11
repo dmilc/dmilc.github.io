@@ -31,7 +31,7 @@
 
 
   <meta property="og:type" content="article" />
-  <meta property="article:published_time" content="2021-05-01T11:11:00+00:00">
+  <meta property="article:published_time" content="2023-08-18T11:11:00+00:00">
 
 
 
@@ -66,7 +66,7 @@
   
     
     
-      "datePublished":"2021-05-01T11:11:00+00:00",
+      "datePublished":"2023-08-18T11:11:00+00:00",
     
     "mainEntityOfPage":{
       "@type":"WebPage",
@@ -85,6 +85,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="https://www.bitsdraumar.is/assets/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="https://www.bitsdraumar.is/assets/apple-touch-icon.png">
 
+  
+    <link type="application/atom+xml" rel="alternate" href="https://www.bitsdraumar.is/rss.xml" title="Bitsdraumar" />
   
 
   
@@ -116,111 +118,109 @@
   <div class="post">
   	<div class="post-info">
   		
-  		<span>on&nbsp;</span><time datetime="2021-05-01T11:11:00+00:00">May  1, 2021</time>
+  		<span>on&nbsp;</span><time datetime="2023-08-18T11:11:00+00:00">August 18, 2023</time>
   	</div>
   	<h1 class="post-title">Benchmarking interpreter dispatch: part 1</h1>
   	<div class="post-line"></div>
-  	<p>Analyzing and evaluating various interpreter dispatch techniques.</p>
+  	<p>In this series we will be analyzing and evaluating various interpreter dispatch techniques and their performance characteristics.</p>
 <span id="continue-reading"></span>
-<p>Benchmarking indirect vs switch interpreter dispatch</p>
-<p>So, most interpreter cores are structured in a similar manner, a switch enclosed by a while loop.<br />
-It loops endlessly while switching on the instruction opcode and thus dispatching to the code that handles the execution of that specific instruction, pretty simple.</p>
-<p>Now this dispatching mechanism is an overhead cost, it's time being spent somewhere other than actually executing your code, so it's in our best interest to minimize it.</p>
-<p>A popular alternative is something called indirect dispatch, where instead a loop and a switch, we just have labels for each of the instruction opcodes (types) and an array containing the adresses of those labels.
-So the way we jump to those labels is by indexing the array with the instruction opcode, pretty nifty, right?</p>
-<p>The reasoning behind this approach is that we avoid the jump back to the central opcode dispatch, thus eliminating at least some of the overhead.</p>
-<p>This approach is used by LuaJIT2's interpreter (although in hand-written assembly).</p>
-<p>There's a lot more dispatch methods, but I'll save that for another blog post.
-Right now, this'll do.</p>
-<p>So, for out test case, we'll use a simple VM that has a loop instruction and a few arithmetic instructions to ensure the compiler compiles it as it would
-an actual interpreter loop, as having too few instructions makes them do weird basic block generation.</p>
-<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">swtch</span><span>(</span><span style="color:#b48ead;">unsigned char</span><span>* </span><span style="color:#bf616a;">ip</span><span>) {
-</span><span>    </span><span style="color:#b48ead;">int</span><span> counter = </span><span style="color:#d08770;">0</span><span>, ret = </span><span style="color:#d08770;">0</span><span>;
+<p>Most dynamic programming languages handle execution via an interpreter core.
+In many cases this is implemented via a simple while-switch loop where dispatch is done
+on an instruction opcode, as evidenced here in Lua (though as you can see, there's an optional indirect dispatch variant, as is the case in many other similar scripting languages).</p>
+<p>In this post we'll explore the most popular alternative to this switch dispatch - the indirect threaded, jump table dispatch.
+More specifically, the performance differences.<br />
+Newer processor architectures have significantly improved branch predictors, so it may be interesting to see
+If the gap has been narrowed over the years.</p>
+<p>In indirect dispatch, instead a loop and a switch, we just have labels for each of the instruction opcodes (types) and an array containing the adresses of those labels.
+So the way we jump to those labels is by indexing the array with the instruction opcode. Pretty nifty, right?</p>
+<p>There are alternative approaches that, instead of bytecode, interpret AST nodes or even the source code line-by-line.
+They won't be covered as they are not quite as efficient.</p>
+<p>The next section will contain a short explanation of the techniques, so if you're familiar with them
+or maybe you just want to see the numbers, feel free to skip it!</p>
+<h1 id="dispatch-techniques">Dispatch techniques</h1>
+<h2 id="switch-based-dispatch">Switch-based dispatch</h2>
+<p>This dispatch is very simple. The while loop loops endlessly, fetching the next instruction and dispatching based on the instruction opcode.
+As shown below:</p>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#81a1c1;">int </span><span style="color:#88c0d0;">swtch</span><span>(</span><span style="color:#81a1c1;">unsigned char* </span><span>ip) {
+</span><span>    </span><span style="color:#81a1c1;">int</span><span> counter </span><span style="color:#81a1c1;">= </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">,</span><span> ret </span><span style="color:#81a1c1;">= </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">;
 </span><span>
-</span><span>    </span><span style="color:#b48ead;">while</span><span>(</span><span style="color:#d08770;">1</span><span>) {
-</span><span>        </span><span style="color:#b48ead;">switch</span><span>(*ip++) {
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">0</span><span>:
-</span><span>                ret++;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">1</span><span>:
-</span><span>                ret--;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">2</span><span>:
-</span><span>                ret += </span><span style="color:#d08770;">2</span><span>;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">3</span><span>:
-</span><span>                </span><span style="color:#b48ead;">if</span><span>(counter++ &lt; </span><span style="color:#d08770;">100000</span><span>)
-</span><span>                    ip--;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">4</span><span>:
-</span><span>                </span><span style="color:#b48ead;">return</span><span> ret;
+</span><span>    </span><span style="color:#81a1c1;">while</span><span>(</span><span style="color:#b48ead;">1</span><span>) {
+</span><span>        </span><span style="color:#81a1c1;">switch</span><span>(</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>) {
+</span><span>            </span><span style="color:#81a1c1;">case </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">: </span><span style="color:#616e88;">// INC 1
+</span><span>                ret</span><span style="color:#81a1c1;">++</span><span style="color:#eceff4;">;
+</span><span>                </span><span style="color:#81a1c1;">break</span><span style="color:#eceff4;">;
+</span><span>            </span><span style="color:#81a1c1;">case </span><span style="color:#b48ead;">1</span><span style="color:#eceff4;">: </span><span style="color:#616e88;">// DEC 1
+</span><span>                ret</span><span style="color:#81a1c1;">--</span><span style="color:#eceff4;">;
+</span><span>                </span><span style="color:#81a1c1;">break</span><span style="color:#eceff4;">;
+</span><span>            </span><span style="color:#81a1c1;">case </span><span style="color:#b48ead;">2</span><span style="color:#eceff4;">: </span><span style="color:#616e88;">// INC 2
+</span><span>                ret </span><span style="color:#81a1c1;">+= </span><span style="color:#b48ead;">2</span><span style="color:#eceff4;">;
+</span><span>                </span><span style="color:#81a1c1;">break</span><span style="color:#eceff4;">;
+</span><span>            </span><span style="color:#81a1c1;">case </span><span style="color:#b48ead;">3</span><span style="color:#eceff4;">: </span><span style="color:#616e88;">// LOOP
+</span><span>                </span><span style="color:#81a1c1;">if</span><span>(counter</span><span style="color:#81a1c1;">++ &lt; </span><span style="color:#b48ead;">100000</span><span>)
+</span><span>                    ip</span><span style="color:#81a1c1;">--</span><span style="color:#eceff4;">;
+</span><span>                </span><span style="color:#81a1c1;">break</span><span style="color:#eceff4;">;
+</span><span>            </span><span style="color:#81a1c1;">case </span><span style="color:#b48ead;">4</span><span style="color:#eceff4;">: </span><span style="color:#616e88;">// RET
+</span><span>                </span><span style="color:#81a1c1;">return</span><span> ret</span><span style="color:#eceff4;">;
 </span><span>        }
 </span><span>    }
 </span><span>}
 </span></code></pre>
-<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">swtch_unreachable</span><span>(</span><span style="color:#b48ead;">unsigned char</span><span>* </span><span style="color:#bf616a;">ip</span><span>) {
-</span><span>    </span><span style="color:#b48ead;">int</span><span> counter = </span><span style="color:#d08770;">0</span><span>, ret = </span><span style="color:#d08770;">0</span><span>;
+<h2 id="indirect-threading">Indirect threading</h2>
+<p>This technique involves using GCC's computed goto extension, where we can <code>goto</code> to a dynamically computed/chosen label.</p>
+<p>It's structured as a static jump table that contains addresses to labels for all of the instruction handling branches, each instruction handler is simply a label followed by the code that executes the actual instruction.</p>
+<p>There is no outer loop here, each instruction handler takes care of the dispatch by fetching the next instruction, indexing the jump table by the opcode value and jumping to that label.<br />
+And thus the dispatch code is replicated in each branch instead of being centralised as seen in the switch version, which may seem wasteful, but the the cycle savings are worth it.</p>
+<p>It sounds more complicated that it is, the simple example below should clear things right up.</p>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#81a1c1;">int </span><span style="color:#88c0d0;">indirect</span><span>(</span><span style="color:#81a1c1;">unsigned char* </span><span>ip) {
+</span><span>    </span><span style="color:#81a1c1;">int</span><span> counter </span><span style="color:#81a1c1;">= </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">,</span><span> ret </span><span style="color:#81a1c1;">= </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">;
 </span><span>
-</span><span>    </span><span style="color:#b48ead;">while</span><span>(</span><span style="color:#d08770;">1</span><span>) {
-</span><span>        </span><span style="color:#b48ead;">switch</span><span>(*ip++) {
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">0</span><span>:
-</span><span>                ret++;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">1</span><span>:
-</span><span>                ret--;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">2</span><span>:
-</span><span>                ret += </span><span style="color:#d08770;">2</span><span>;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">3</span><span>:
-</span><span>                </span><span style="color:#b48ead;">if</span><span>(counter++ &lt; </span><span style="color:#d08770;">100000</span><span>)
-</span><span>                    ip--;
-</span><span>                </span><span style="color:#b48ead;">break</span><span>;
-</span><span>            </span><span style="color:#b48ead;">case </span><span style="color:#d08770;">4</span><span>:
-</span><span>                </span><span style="color:#b48ead;">return</span><span> ret;
-</span><span>            </span><span style="color:#b48ead;">default</span><span>:
-</span><span>                </span><span style="color:#bf616a;">__builtin_unreachable</span><span>();
-</span><span>        }
-</span><span>    }
+</span><span>    </span><span style="color:#81a1c1;">static void*</span><span> jump_table[] </span><span style="color:#81a1c1;">= </span><span>{
+</span><span>        </span><span style="color:#81a1c1;">&amp;&amp;</span><span>add</span><span style="color:#eceff4;">,
+</span><span>        </span><span style="color:#81a1c1;">&amp;&amp;</span><span>sub</span><span style="color:#eceff4;">,
+</span><span>        </span><span style="color:#81a1c1;">&amp;&amp;</span><span>add2</span><span style="color:#eceff4;">,
+</span><span>        </span><span style="color:#81a1c1;">&amp;&amp;</span><span>loop</span><span style="color:#eceff4;">,
+</span><span>        </span><span style="color:#81a1c1;">&amp;&amp;</span><span>ret</span><span style="color:#eceff4;">,
+</span><span>    }</span><span style="color:#eceff4;">;
+</span><span>
+</span><span>    </span><span style="color:#81a1c1;">goto *</span><span>jump_table[</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>]</span><span style="color:#eceff4;">;
+</span><span>
+</span><span>    </span><span style="color:#5e81ac;">add</span><span style="color:#eceff4;">:
+</span><span>        ret</span><span style="color:#81a1c1;">++</span><span style="color:#eceff4;">;
+</span><span>        </span><span style="color:#81a1c1;">goto *</span><span>jump_table[</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>]</span><span style="color:#eceff4;">;
+</span><span>    </span><span style="color:#5e81ac;">sub</span><span style="color:#eceff4;">:
+</span><span>        ret</span><span style="color:#81a1c1;">--</span><span style="color:#eceff4;">;
+</span><span>        </span><span style="color:#81a1c1;">goto *</span><span>jump_table[</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>]</span><span style="color:#eceff4;">;
+</span><span>    </span><span style="color:#5e81ac;">add2</span><span style="color:#eceff4;">:
+</span><span>        ret </span><span style="color:#81a1c1;">+= </span><span style="color:#b48ead;">2</span><span style="color:#eceff4;">;
+</span><span>        </span><span style="color:#81a1c1;">goto *</span><span>jump_table[</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>]</span><span style="color:#eceff4;">;
+</span><span>    </span><span style="color:#5e81ac;">loop</span><span style="color:#eceff4;">:
+</span><span>        </span><span style="color:#81a1c1;">if</span><span>(counter</span><span style="color:#81a1c1;">++ &lt; </span><span style="color:#b48ead;">100000</span><span>)
+</span><span>            ip</span><span style="color:#81a1c1;">--</span><span style="color:#eceff4;">;
+</span><span>        </span><span style="color:#81a1c1;">goto *</span><span>jump_table[</span><span style="color:#81a1c1;">*</span><span>ip</span><span style="color:#81a1c1;">++</span><span>]</span><span style="color:#eceff4;">;
+</span><span>    </span><span style="color:#5e81ac;">ret</span><span style="color:#eceff4;">:
+</span><span>        </span><span style="color:#81a1c1;">return</span><span> ret</span><span style="color:#eceff4;">;
 </span><span>}
 </span></code></pre>
-<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">indirect</span><span>(</span><span style="color:#b48ead;">unsigned char</span><span>* </span><span style="color:#bf616a;">ip</span><span>) {
-</span><span>    </span><span style="color:#b48ead;">int</span><span> counter = </span><span style="color:#d08770;">0</span><span>, ret = </span><span style="color:#d08770;">0</span><span>;
-</span><span>
-</span><span>    </span><span style="color:#b48ead;">static void</span><span>* jump_table[] = {
-</span><span>        &amp;&amp;add,
-</span><span>        &amp;&amp;sub,
-</span><span>        &amp;&amp;add2,
-</span><span>        &amp;&amp;loop,
-</span><span>        &amp;&amp;ret,
-</span><span>    };
-</span><span>
-</span><span>    </span><span style="color:#b48ead;">goto </span><span>*jump_table[*ip++];
-</span><span>
-</span><span>    add:
-</span><span>        ret++;
-</span><span>        </span><span style="color:#b48ead;">goto </span><span>*jump_table[*ip++];
-</span><span>    sub:
-</span><span>        ret--;
-</span><span>        </span><span style="color:#b48ead;">goto </span><span>*jump_table[*ip++];
-</span><span>    add2:
-</span><span>        ret += </span><span style="color:#d08770;">2</span><span>;
-</span><span>        </span><span style="color:#b48ead;">goto </span><span>*jump_table[*ip++];
-</span><span>    loop:
-</span><span>        </span><span style="color:#b48ead;">if</span><span>(counter++ &lt; </span><span style="color:#d08770;">100000</span><span>)
-</span><span>            ip--;
-</span><span>        </span><span style="color:#b48ead;">goto </span><span>*jump_table[*ip++];
-</span><span>    ret:
-</span><span>        </span><span style="color:#b48ead;">return</span><span> ret;
-</span><span>}
-</span></code></pre>
-<pre data-lang="asm" style="background-color:#2b303b;color:#c0c5ce;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#b48ead;">mov </span><span style="color:#bf616a;">rax</span><span>, </span><span style="color:#bf616a;">rax
-</span><span style="color:#b48ead;">xor </span><span style="color:#bf616a;">r9d</span><span>, </span><span style="color:#bf616a;">r9d
+<h1 id="benchmarking">Benchmarking</h1>
+<p>So for the purposes of benchmarking, we'll write a simple VM.</p>
+<p>It only contains the bare minimum, since we only need to benchmark the dispatch overhead itself.
+There's a few extra instructions in there, otherwise gcc does some weird basic block generation that's not
+really representative of a typical interpreter.</p>
+<p>So, on to the code.</p>
+<p>Switch</p>
+<p>Indirect</p>
+<h1 id="results">Results</h1>
+<p>Graph</p>
+<p>As we can see, it's not too surprising to see indirect dispatch winning.</p>
+<p>Let's look at the assembly to see what's going on.</p>
+<pre data-lang="asm" style="background-color:#2e3440;color:#d8dee9;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#81a1c1;">mov </span><span>rax, rax
+</span><span style="color:#81a1c1;">xor </span><span>r9d, r9d
 </span></code></pre>
 <p><code>xor</code> is a macro that prints text to the console.</p>
 <p><code>rustc</code> will produce a <code>hello</code> binary that can be executed.</p>
-<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> ./hello
-</span><span style="color:#bf616a;">Hello</span><span> World!
+<pre data-lang="bash" style="background-color:#2e3440;color:#d8dee9;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#88c0d0;">$</span><span> ./hello
+</span><span style="color:#88c0d0;">Hel
+</span><span style="color:#88c0d0;">lo</span><span> World!
 </span></code></pre>
 
   </div>
