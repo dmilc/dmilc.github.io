@@ -7,11 +7,11 @@
   
 
   
-<title>About | Bitsdraumar</title>
+<title>About &amp; Projects | Bitsdraumar</title>
 
 
 
-<meta property="og:title" content="About">
+<meta property="og:title" content="About &amp; Projects">
 
 
 
@@ -42,7 +42,7 @@
 
 
 
-  <meta property="twitter:title" content="About">
+  <meta property="twitter:title" content="About &amp; Projects">
 
 
 
@@ -61,7 +61,7 @@
   "url": "https://www.bitsdraumar.is/about/",
   "@context":"https://schema.org",
   "@type": "WebPage",
-  "headline": "About"
+  "headline": "About &amp; Projects"
   
 }
 </script>
@@ -96,7 +96,7 @@
         
           <li><a href="https://www.bitsdraumar.is">Posts</a></li>
           <li><a href="https://www.bitsdraumar.is/tags">Tags</a></li>
-          <li><a href="https://www.bitsdraumar.is/about">About</a></li>
+          <li><a href="https://www.bitsdraumar.is/about">About & Projects</a></li>
         
       </ul>
     </div>
@@ -109,17 +109,33 @@
 	<div class="post-info">
 		
 	</div>
-	<h1 class="post-title">About</h1>
+	<h1 class="post-title">About &amp; Projects</h1>
 	<div class="post-line"></div>
-	<p>Tala-Zola is a minimal <a href="https://www.getzola.org">Zola</a> theme helping you to
-build a light and seo-ready blog, and you can customise any information of the
-blog without having to modify the codes of the template. Tala-Zola is a port of
-the Jekyll theme <a href="https://github.com/chesterhow/tale">Tale</a>.</p>
-<p>Tale-Zola is seo-ready and it suports the open graph, Twitter cards and JSON-LD.
-All you need to do is just write an article for your blog.</p>
-<h2 id="contribute">Contribute</h2>
-<p>Feel free to create an issue or make a pull request on <a href="https://github.com/aaranxu/tale-zola">GitHub</a>.</p>
-<p>Thanks for reading!</p>
+	<h1 id="about-me-wip">About me (WIP)</h1>
+<p>Hi, my name is David Miličević. I'm a software engineer specializing in all things low-level.</p>
+<p>My main are of interest is compilers, specifically tracing just-in-time compilers.
+I've dabbled in everything from hand writing assembly and writing AVX vectorized code to video streaming and game development.</p>
+<h1 id="projects-wip">Projects (WIP)</h1>
+<h2 id="dynamic-risc-v-assembler">Dynamic RISC-V assembler</h2>
+<p>TODO</p>
+<h2 id="optimizing-tracing-jit-compiler">Optimizing tracing JIT compiler</h2>
+<p>This is an optimizing tracing JIT compiler for a simple statically-typed language.</p>
+<p>The parser directly emits a flat register-based bytecode which is then interpreted by an indirect-threaded VM.</p>
+<p>The VM has 2 dispatch tables; one for profiling, one for recording.
+Profiling is run until a loop hit counter (contained inside the instruction itself) reaches a predefined threshold (indicating the loop is &quot;hot&quot;). The tables are then switched and recording begins.
+Recording emits executed bytecode instructions and records guards and branch biases for branching instructions.
+There are a few conditions which trigger a bailout (and eventually blacklisting): jumping outside of the loop, jumping to a different loop header, stumbling upon an inner loop or reaching loop end but with an unexpected branch bias.</p>
+<p>The IR is a region-based pseudo sea-of-nodes SSA representation.
+Most of the usual optimizations are here:
+algebraic reassociation, constant folding, constant propagation,
+copy propagation, common subexpression elimination, loop inversion,
+dead code elimination, store sinking, function inlining,
+on-stack replacement, loop-invariant code motion
+and linear scan register allocation.</p>
+<p>(Some of them don't apply in all cases, due to implementation time constraints.)</p>
+<p>Once all of the above is done, the IR is passed through a simple template assembler that uses DynASM for codegen (with some minor peephole optimizations).
+At the end, the machine code is written to virtual memory and RX protected, and the original loop header instruction is switched to the JIT version.</p>
+<p>Now every time the interpreter reaches the new jitted loop header it switches to the compiled trace. Neat.</p>
 
 </div>
 <div class="pagination">
