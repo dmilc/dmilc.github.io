@@ -127,8 +127,7 @@
 <p>Most dynamic programming languages handle execution via an interpreter core.
 In many cases this is implemented via a simple while-switch loop where dispatch is done
 on an instruction opcode, as evidenced here in <a href="https://github.com/lua/lua/blob/v5.4.0/lvm.c#L1158">Lua</a> (though as you can see, there's an optional indirect dispatch variant, as is the case in many other similar scripting languages).</p>
-<p>In this post we'll explore the most popular alternative to this switch dispatch - the indirect threaded, jump table dispatch.
-More specifically, the performance differences.<br />
+<p>In this post we'll explore the most popular alternative to this switch dispatch - the indirect threaded, jump table dispatch. More specifically, the performance differences.<br />
 Newer processor architectures have significantly improved branch predictors, so it may be interesting to see
 If the gap has been narrowed over the years.</p>
 <p>In indirect dispatch, instead a loop and a switch, we just have labels for each of the instruction opcodes (types) and an array containing the adresses of those labels.
