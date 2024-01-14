@@ -111,15 +111,12 @@
 	</div>
 	<h1 class="post-title">About &amp; Projects</h1>
 	<div class="post-line"></div>
-	<h1 id="about-me-wip">About me (WIP)</h1>
-<p>Hi, my name is David Miličević. I'm a software engineer specializing in all things low-level.</p>
-<p>My main are of interest is compilers, specifically tracing just-in-time compilers.
-I've dabbled in everything from hand writing assembly and writing AVX vectorized code to video streaming and game development.</p>
-<h1 id="projects-wip">Projects (WIP)</h1>
-<h2 id="dynamic-risc-v-assembler">Dynamic RISC-V assembler</h2>
-<p>TODO</p>
-<h2 id="optimizing-tracing-jit-compiler">Optimizing tracing JIT compiler</h2>
-<p>This is an optimizing tracing JIT compiler for a simple statically-typed language.</p>
+	<h1 id="about-me">About me</h1>
+<p>Hi! I am David Miličević. I'm a software engineer specializing in all things low-level. Used to work at a small hardware startup (not really, but it operated like one), now working at an SaaS company.</p>
+<p>My main area of interest is compilers, specifically tracing just-in-time compilers. I've dabbled in everything from hand writing assembly and writing AVX vectorized code to video streaming and game development. Anything to do with C, C++, Rust and Assembly is game.</p>
+<h1 id="projects-wip-links-coming-later">Projects (WIP - links coming later)</h1>
+<h2 id="zonn-an-optimizing-tracing-jit-compiler">Zonn - An optimizing tracing JIT compiler</h2>
+<p>This is an optimizing tracing JIT compiler for a simple statically-typed language. The language is relatively minimal, just enough to write a few benchmarks.</p>
 <p>The parser directly emits a flat register-based bytecode which is then interpreted by an indirect-threaded VM.</p>
 <p>The VM has 2 dispatch tables; one for profiling, one for recording.
 Profiling is run until a loop hit counter (contained inside the instruction itself) reaches a predefined threshold (indicating the loop is &quot;hot&quot;). The tables are then switched and recording begins.
@@ -131,11 +128,12 @@ algebraic reassociation, constant folding, constant propagation,
 copy propagation, common subexpression elimination, loop inversion,
 dead code elimination, store sinking, function inlining,
 on-stack replacement, loop-invariant code motion
-and linear scan register allocation.</p>
-<p>(Some of them don't apply in all cases, due to implementation time constraints.)</p>
+and linear scan register allocation. (Some of them don't apply in all cases, due to implementation time constraints)</p>
 <p>Once all of the above is done, the IR is passed through a simple template assembler that uses DynASM for codegen (with some minor peephole optimizations).
 At the end, the machine code is written to virtual memory and RX protected, and the original loop header instruction is switched to the JIT version.</p>
 <p>Now every time the interpreter reaches the new jitted loop header it switches to the compiled trace. Neat.</p>
+<h2 id="parnasse-dynamic-risc-v-assembler">Parnasse - Dynamic RISC-V assembler</h2>
+<p>An attempt at writing a dynamic RISC-V assembler that's currently on pause, waiting for a serious ground-up rewrite.</p>
 
 </div>
 <div class="pagination">
