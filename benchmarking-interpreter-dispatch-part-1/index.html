@@ -90,6 +90,22 @@
   
 
   
+    <script async src='https://www.google-analytics.com/analytics.js'></script>
+    <script>
+      window.ga = window.ga || function () { (ga.q = ga.q || []).push(arguments) }; ga.l = +new Date;
+      ga('create', 'G-KKHSG7T4QK', 'auto');
+      ga('send', 'pageview');
+    </script>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KKHSG7T4QK"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-KKHSG7T4QK');
+    </script>
+  
 
   
   
@@ -187,9 +203,10 @@ As shown below:</p>
 <p>It only contains the bare minimum, since we only need to benchmark the dispatch overhead itself.
 There's a few extra instructions in there, otherwise gcc does some weird basic block generation that's not
 really representative of a typical interpreter.</p>
-<h1 id="results">Results</h1>
-<p><img src="https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/graph.svg" alt="image showing indirect dispatch being faster" title="Benchmark results" /></p>
+<p>The hardware used is a 2019 Macbook Pro with a 2.4Ghz quad core i5.</p>
+<h1 id="results-wip">Results (WIP)</h1>
 <p>(TODO)</p>
+<p><img src="https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/graph.svg" alt="image showing indirect dispatch being faster" title="Benchmark results" /></p>
 
   </div>
 
