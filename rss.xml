@@ -7,10 +7,10 @@
       <generator>Zola</generator>
       <language>en</language>
       <atom:link href="https://www.bitsdraumar.is/rss.xml" rel="self" type="application/rss+xml"/>
-      <lastBuildDate>Thu, 11 Jan 2024 11:11:00 +0000</lastBuildDate>
+      <lastBuildDate>Sun, 21 Jan 2024 01:30:00 +0000</lastBuildDate>
       <item>
-          <title>Benchmarking interpreter dispatch: part 1 (WIP)</title>
-          <pubDate>Thu, 11 Jan 2024 11:11:00 +0000</pubDate>
+          <title>Benchmarking interpreter dispatch: part 1</title>
+          <pubDate>Sun, 21 Jan 2024 01:30:00 +0000</pubDate>
           <author>Unknown</author>
           <link>https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/</link>
           <guid>https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/</guid>

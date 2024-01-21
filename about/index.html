@@ -128,20 +128,27 @@
 	<h1 class="post-title">About &amp; Projects</h1>
 	<div class="post-line"></div>
 	<h1 id="about-me">About me</h1>
-<p>Hi! I am David Miličević. I'm a software engineer specializing in all things low-level. Used to work at a small hardware startup (not really, but it operated like one), now working at an SaaS company.</p>
-<p>My main area of interest is compilers, specifically tracing just-in-time compilers. I've dabbled in everything from hand writing assembly and writing AVX vectorized code to video streaming and game development. Anything to do with C, C++, Rust and Assembly is game.</p>
+<p>Hi! I'm David Miličević, a software engineer specializing in all things low-level.<br />
+Used to work at a small hardware startup (not really, but it operated like one), now working at an SaaS company.</p>
+<p>My main area of interest is compilers, specifically tracing just-in-time compilers. I've dabbled in everything from hand writing assembly and writing AVX vectorized code to video streaming and game development.<br />
+Anything to do with C, C++, Rust and assembly is game.</p>
+<h1 id="about-the-blog">About the blog</h1>
+<p>The name Bitsdraumar is a reference to Baldrs draumar (Baldur's dreams), an old norse poem appearing in the Poetic Edda.<br />
+Just like the poem is about the dreams of the god Baldur, so is the blog name about the dreams of one single bit to become part of something more. A nibble, a byte or even something greater.</p>
+<p>Most of the content of the blog will be about low-level programming, so expect a lot of C, assembly and compilers.</p>
 <h1 id="projects-wip-links-coming-later">Projects (WIP - links coming later)</h1>
 <h2 id="zonn-an-optimizing-tracing-jit-compiler">Zonn - An optimizing tracing JIT compiler</h2>
 <p>This is an optimizing tracing JIT compiler for a simple statically-typed language. The language is relatively minimal, just enough to write a few benchmarks.</p>
+<p>The JIT uses the NLF (Natural Loop First) region selection heuristic, bytecode-integrated profile counters for precise and low-overhead profiling and store sinking via dense per-guard snapshots. It performs both OSR (on-stack replacement) and deoptimization.</p>
+<p>Now onto the details:</p>
 <p>The parser directly emits a flat register-based bytecode which is then interpreted by an indirect-threaded VM.</p>
 <p>The VM has 2 dispatch tables; one for profiling, one for recording.
 Profiling is run until a loop hit counter (contained inside the instruction itself) reaches a predefined threshold (indicating the loop is &quot;hot&quot;). The tables are then switched and recording begins.
 Recording emits executed bytecode instructions and records guards and branch biases for branching instructions.
 There are a few conditions which trigger a bailout (and eventually blacklisting): jumping outside of the loop, jumping to a different loop header, stumbling upon an inner loop or reaching loop end but with an unexpected branch bias.</p>
-<p>The IR is a region-based pseudo sea-of-nodes SSA representation.
+<p>The IR is a region-based pseudo sea-of-nodes SSA representation.<br />
 Most of the usual optimizations are here:
-algebraic reassociation, constant folding, constant propagation,
-copy propagation, common subexpression elimination, loop inversion,
+algebraic reassociation, strength reduction, constant folding, constant propagation, copy propagation, common subexpression elimination, loop inversion,
 dead code elimination, store sinking, function inlining,
 on-stack replacement, loop-invariant code motion
 and linear scan register allocation. (Some of them don't apply in all cases, due to implementation time constraints)</p>

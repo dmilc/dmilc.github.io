@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   
-<title>Benchmarking interpreter dispatch: part 1 (WIP) | Bitsdraumar</title>
+<title>Benchmarking interpreter dispatch: part 1 | Bitsdraumar</title>
 
 
 
-<meta property="og:title" content="Benchmarking interpreter dispatch: part 1 (WIP)">
+<meta property="og:title" content="Benchmarking interpreter dispatch: part 1">
 
 
 
@@ -31,7 +31,7 @@
 
 
   <meta property="og:type" content="article" />
-  <meta property="article:published_time" content="2024-01-11T11:11:00+00:00">
+  <meta property="article:published_time" content="2024-01-21T01:30:00+00:00">
 
 
 
@@ -43,7 +43,7 @@
 
 
 
-  <meta property="twitter:title" content="Benchmarking interpreter dispatch: part 1 (WIP)">
+  <meta property="twitter:title" content="Benchmarking interpreter dispatch: part 1">
 
 
 
@@ -62,11 +62,11 @@
   "url": "https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/",
   "@context":"https://schema.org",
   "@type": "BlogPosting",
-  "headline": "Benchmarking interpreter dispatch: part 1 (WIP)"
+  "headline": "Benchmarking interpreter dispatch: part 1"
   
     
     
-      "datePublished":"2024-01-11T11:11:00+00:00",
+      "datePublished":"2024-01-21T01:30:00+00:00",
     
     "mainEntityOfPage":{
       "@type":"WebPage",
@@ -134,9 +134,9 @@
   <div class="post">
   	<div class="post-info">
   		
-  		<span>on&nbsp;</span><time datetime="2024-01-11T11:11:00+00:00">January 11, 2024</time>
+  		<span>on&nbsp;</span><time datetime="2024-01-21T01:30:00+00:00">January 21, 2024</time>
   	</div>
-  	<h1 class="post-title">Benchmarking interpreter dispatch: part 1 (WIP)</h1>
+  	<h1 class="post-title">Benchmarking interpreter dispatch: part 1</h1>
   	<div class="post-line"></div>
   	<p>In this series we will be analyzing and evaluating various interpreter dispatch techniques and their performance characteristics.</p>
 <span id="continue-reading"></span>
@@ -200,13 +200,57 @@ As shown below:</p>
 </span></code></pre>
 <h1 id="benchmarking">Benchmarking</h1>
 <p>So for the purposes of benchmarking, we'll write a simple VM, very similar to the examples shown above.</p>
-<p>It only contains the bare minimum, since we only need to benchmark the dispatch overhead itself.
-There's a few extra instructions in there, otherwise gcc does some weird basic block generation that's not
-really representative of a typical interpreter.</p>
-<p>The hardware used is a 2019 Macbook Pro with a 2.4Ghz quad core i5.</p>
-<h1 id="results-wip">Results (WIP)</h1>
-<p>(TODO)</p>
+<p>It only contains the bare minimum, since we only need to benchmark the dispatch overhead itself. The main part used for benchmarking is the loop with some addition, just so we don't have a ton of bytecode which would bring D-cache into the mix.</p>
+<p>Here's the <a href="https://gist.github.com/dmilc/50ad04b261e9e094ce35562e2bb724dd">gist</a> for the switch version, and the <a href="https://gist.github.com/dmilc/61e8e74795de09e82bfea30d2adf0056">gist</a> for the indirect version.</p>
+<p>There's also a few extra unused instructions in there, otherwise both clang and gcc do some weird basic block generation that's not really representative of a typical interpreter.</p>
+<p>The hardware used is a 2019 Macbook Pro with a 2.4Ghz quad core i5.<br />
+The compiler used is Clang version 12.0.5 (clang-1205.0.22.11) with -O3 as being the only option.</p>
+<p><a href="https://github.com/sharkdp/hyperfine">Hyperfine</a> is used for benchmarking, very highly recommended.<br />
+Provides all sorts of useful stuff, from minimising system interference to generating graphs in combination with the provided python scripts. Super practical.<br />
+The benchmark itself was ran with 3 warmups runs as that provided results that were consistent enough.</p>
+<p>Anyways, onto the results.</p>
+<h1 id="results">Results</h1>
+<p>Directly from hyperfine:</p>
+<pre style="background-color:#2e3440;color:#d8dee9;"><code><span>Benchmark 1: indirect
+</span><span>  Time (mean ± σ):      72.6 ms ±   1.0 ms    [User: 70.2 ms, System: 1.0 ms]
+</span><span>  Range (min … max):    70.6 ms …  74.6 ms    40 runs
+</span><span> 
+</span><span>Benchmark 2: switch
+</span><span>  Time (mean ± σ):     119.2 ms ±   2.1 ms    [User: 116.6 ms, System: 1.1 ms]
+</span><span>  Range (min … max):   116.3 ms … 123.4 ms    25 runs
+</span></code></pre>
+<p>As we can see, the indirect version is approximately 64% faster than the switch version.</p>
 <p><img src="https://www.bitsdraumar.is/benchmarking-interpreter-dispatch-part-1/graph.svg" alt="image showing indirect dispatch being faster" title="Benchmark results" /></p>
+<p>Now let's look at the assembly. Let's assume that we will simply execute the loop instruction and jump back to it until the counter has ticked over. Of course, the immediate integer values are wrong in this case, but that's not relevant for the analysis.</p>
+<p>Switch:</p>
+<pre data-lang="asm" style="background-color:#2e3440;color:#d8dee9;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#88c0d0;">.LBB0_1: # interpreter </span><span style="color:#81a1c1;">loop </span><span style="color:#88c0d0;">start</span><span>, </span><span style="color:#88c0d0;">central dispatch
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">mov     </span><span>edx, </span><span style="color:#88c0d0;">dword ptr </span><span>[rdi]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">add     </span><span>rdi, 4
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">cmp     </span><span>rdx, 4
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">ja      </span><span style="color:#88c0d0;">.LBB0_1
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">jmp     </span><span style="color:#88c0d0;">qword ptr </span><span>[8*rdx + </span><span style="color:#88c0d0;">.LJTI0_0</span><span>] </span><span style="color:#88c0d0;"># jumps to an instruction handler via the address table
+</span><span style="color:#88c0d0;">.LBB0_6: # </span><span style="color:#81a1c1;">loop </span><span style="color:#88c0d0;">instruction handler
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">cmp     </span><span>ecx, 30000000
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">lea     </span><span>ecx, [rcx + 1]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">lea     </span><span>rdx, [rdi - 16]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">cmovb   </span><span>rdi, rdx
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">jmp     </span><span style="color:#88c0d0;">.LBB0_1 # jumps back to central dispatch
+</span></code></pre>
+<p>Indirect:</p>
+<pre data-lang="asm" style="background-color:#2e3440;color:#d8dee9;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#88c0d0;">.LBB0_6: # </span><span style="color:#81a1c1;">loop </span><span style="color:#88c0d0;">instruction handler
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">cmp     </span><span>ecx, 30000000
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">lea     </span><span>ecx, [rcx + 1]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">lea     </span><span>rdx, [rdi - 16]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">cmovae  </span><span>rdx, rdi
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">add     </span><span>rdx, 4
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">mov     </span><span>esi, </span><span style="color:#88c0d0;">dword ptr </span><span>[rdx - 4]
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">mov     </span><span>rdi, rdx
+</span><span style="color:#88c0d0;">    </span><span style="color:#81a1c1;">jmp     </span><span style="color:#88c0d0;">qword ptr </span><span>[8*rsi + </span><span style="color:#88c0d0;">indirect.jump_table</span><span>] </span><span style="color:#88c0d0;">jumps to an instruction handler via the address table
+</span></code></pre>
+<p>At first glance, we can see that both version include an indirect jump, but the switch version has extra compare and branch instructions. The implications in the overall interpreter perfomance are not as drastic as in this benchmark, but given that we're measuring purely opcode dispatch, those 2 small differences do add up.</p>
+<p>Now, exactly how and why they matter so much is a topic for a different blog post. I would love to give a microarchitectural analysis with stuff like frontend and backend pressure with total uOps per cycle and port usage, but that's out of the scope for this blog post. This post is meant to be more of a sample for things to come.</p>
+<p>The next one in the series will feature a more in-depth analysis, so stay tuned and thanks for reading!</p>
+<p>You can send any comments and suggestions to bitsdraumar(at)pm.me</p>
 
   </div>
 
