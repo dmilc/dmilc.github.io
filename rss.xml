@@ -7,7 +7,16 @@
       <generator>Zola</generator>
       <language>en</language>
       <atom:link href="https://www.bitsdraumar.is/rss.xml" rel="self" type="application/rss+xml"/>
-      <lastBuildDate>Sun, 21 Jan 2024 01:30:00 +0000</lastBuildDate>
+      <lastBuildDate>Sun, 23 Nov 2025 09:30:00 +0000</lastBuildDate>
+      <item>
+          <title>Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t</title>
+          <pubDate>Sun, 23 Nov 2025 09:30:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://www.bitsdraumar.is/bytes-before-flops/</link>
+          <guid>https://www.bitsdraumar.is/bytes-before-flops/</guid>
+          <description>&lt;p&gt;An dive into performance and data-oriented optimization.&lt;&#x2F;p&gt;
+</description>
+      </item>
       <item>
           <title>Benchmarking interpreter dispatch: part 1</title>
           <pubDate>Sun, 21 Jan 2024 01:30:00 +0000</pubDate>

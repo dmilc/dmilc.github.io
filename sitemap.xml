@@ -11,19 +11,38 @@
         <lastmod>2024-01-21T01:30:00+00:00</lastmod>
     </url>
     <url>
+        <loc>https://www.bitsdraumar.is/bytes-before-flops/</loc>
+        <lastmod>2025-11-23T09:30:00+00:00</lastmod>
+    </url>
+    <url>
         <loc>https://www.bitsdraumar.is/page/1/</loc>
     </url>
     <url>
         <loc>https://www.bitsdraumar.is/tags/</loc>
     </url>
     <url>
+        <loc>https://www.bitsdraumar.is/tags/avx/</loc>
+    </url>
+    <url>
         <loc>https://www.bitsdraumar.is/tags/c/</loc>
+    </url>
+    <url>
+        <loc>https://www.bitsdraumar.is/tags/data-oriented-design/</loc>
     </url>
     <url>
         <loc>https://www.bitsdraumar.is/tags/interpreters/</loc>
     </url>
     <url>
         <loc>https://www.bitsdraumar.is/tags/low-level/</loc>
+    </url>
+    <url>
+        <loc>https://www.bitsdraumar.is/tags/optimization/</loc>
+    </url>
+    <url>
+        <loc>https://www.bitsdraumar.is/tags/performance/</loc>
+    </url>
+    <url>
+        <loc>https://www.bitsdraumar.is/tags/simd/</loc>
     </url>
     <url>
         <loc>https://www.bitsdraumar.is/tags/vm/</loc>

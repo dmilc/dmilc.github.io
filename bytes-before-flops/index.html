@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  
+<title>Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t | Bitsdraumar</title>
+
+
+
+<meta property="og:title" content="Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t">
+
+
+
+<meta name="author" content="David Miličević">
+
+
+<meta property="og:locale" content="en-US">
+
+
+
+
+<link rel="canonical" href="https://www.bitsdraumar.is/bytes-before-flops/">
+<meta property="og:url" content="https://www.bitsdraumar.is/bytes-before-flops/">
+
+
+
+<meta property="og:site_name" content="Bitsdraumar" />
+
+
+
+
+
+  <meta property="og:type" content="article" />
+  <meta property="article:published_time" content="2025-11-23T09:30:00+00:00">
+
+
+
+
+
+
+
+  <meta name="twitter:card" content="summary">
+
+
+
+  <meta property="twitter:title" content="Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t">
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+{
+  "author": {
+    "@type":"Person",
+	  "name":"David Miličević"
+  },
+  "description": "",
+  "url": "https://www.bitsdraumar.is/bytes-before-flops/",
+  "@context":"https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t"
+  
+    
+    
+      "datePublished":"2025-11-23T09:30:00+00:00",
+    
+    "mainEntityOfPage":{
+      "@type":"WebPage",
+      "@id":"https://www.bitsdraumar.is/bytes-before-flops/"
+    },
+  
+}
+</script>
+
+  <link rel="stylesheet" href="https://www.bitsdraumar.is/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+  <link href="https://fonts.cdnfonts.com/css/norse" rel="stylesheet">
+                
+
+  <link rel="icon" type="image/png" sizes="32x32" href="https://www.bitsdraumar.is/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://www.bitsdraumar.is/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://www.bitsdraumar.is/assets/apple-touch-icon.png">
+
+  
+    <link type="application/atom+xml" rel="alternate" href="https://www.bitsdraumar.is/rss.xml" title="Bitsdraumar" />
+  
+
+  
+    <script async src='https://www.google-analytics.com/analytics.js'></script>
+    <script>
+      window.ga = window.ga || function () { (ga.q = ga.q || []).push(arguments) }; ga.l = +new Date;
+      ga('create', 'G-KKHSG7T4QK', 'auto');
+      ga('send', 'pageview');
+    </script>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KKHSG7T4QK"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-KKHSG7T4QK');
+    </script>
+  
+
+  
+  
+</head>
+
+<body>
+  
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="https://www.bitsdraumar.is">
+        <h2 class="nav-title">Bitsdraumar</h2>
+      </a>
+      <ul>
+        
+          <li><a href="https://www.bitsdraumar.is">Posts</a></li>
+          <li><a href="https://www.bitsdraumar.is/tags">Tags</a></li>
+          <li><a href="https://www.bitsdraumar.is/about">About & Projects</a></li>
+        
+      </ul>
+    </div>
+  </nav>
+  
+
+  <main>
+    
+  <div class="post">
+  	<div class="post-info">
+  		<span>Written by</span> David Miličević<br>
+  		<span>on&nbsp;</span><time datetime="2025-11-23T09:30:00+00:00">November 23, 2025</time>
+  	</div>
+  	<h1 class="post-title">Bytes before FLOPS: your algorithm is (mostly) fine, your data isn&#x27;t</h1>
+  	<div class="post-line"></div>
+  	<p>An dive into performance and data-oriented optimization.</p>
+<span id="continue-reading"></span><h2 id="foreword">Foreword</h2>
+<p>So, earlier this year I did a presentation at a cool(get it?) little Norwegian company called Airthings.</p>
+<p>It was a two parter. First part was how the compilation pipeline works - from ASCII to assembly, greatly simplified of course. It was from an old presentation I did many years ago.
+The second part is the interesting one if you ask me. It's about performance and what are some of the low-hanging fruits that you can pick off to speed up stuff as much as possible.</p>
+<p>Now, that part actually takes a while, but in short it's basically a distillation of my experience working on compilers, assembly and writing vectorized code.
+The gist of it is - data.</p>
+<p>It ocurred to me that a small summary would make a good blog post. There's plenty of material on data-oriented design and performance, but this might be a nice overview.</p>
+<p>I'll style it as a written representation of how I approach optimization.</p>
+<p>When I approach an optimization effort, first thing I do is I try to visualize the data, where each bit is going from and to, what operations are being done, what's the difference between the initial and final state, can we get there with fewer or simpler steps?</p>
+<p>If the data is coming in in a suboptimal form, transform it.<br />
+There is no algorithm in the world that will save you from inefficiently coded information.</p>
+<p>Usually the steps, in my experience, go like this:</p>
+<h2 id="1-specialize-the-algorithm">1. Specialize the algorithm</h2>
+<p>This step is not directly related to data, but changing data often requires changing the algorithm. Not only do we need to change access patterns and the shape data, but often a different algorithm more suited to the new form of data we're processing.</p>
+<p>Regardless, this is a crucial part as this is where you identify one of the most important parts of optimization - &quot;do less&quot;.
+Usually when we implement algorithms, we just try to make them work, aka. the &quot;make it work-&gt;make it fast-&gt;make it beautiful&quot; paradigm.
+In the process of development we change the data, the algorithm, the code goes through many iterations, a lot if left at the table.</p>
+<p>Specializing an algorithms means taking away the genericity and only leaving in the parts that are relevant to the data being processed.
+If it means specializing the data, then that's fair game as well, garbage in/garbage out. As part of development we tend to use existing algorithms, whether
+it is from a standard library or an external one, or even just different module in the program.</p>
+<p>These existing algorithms are by definition not bespoke and don't take into account the data or the manipulation done on it. In many cases you can rewrite them to suit your use-case, in others you can simply use a more specific algorithm, e.g. <code>radixsort</code> instead of <code>quicksort</code>.</p>
+<p>People are often afraid of peeking into the libraries, thinking it's magic. It's not, just look at the code, learn what's being used and adapt it to your own case.</p>
+<p>The specific example given in the presentation was specializing a generic image downscaling algorithm to specifically 
+handle integer-based, 32bit argb images, which was used to great effect. Sped up the implementation as well as allowed for further optimizations.</p>
+<p>Small and trivial example would be something like this:</p>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#616e88;">// we&#39;re trying to parse a validated, 2-digit, positive integer
+</span><span>
+</span><span style="color:#616e88;">// the generic way (atoi)
+</span><span style="color:#616e88;">// overhead: function call, loop setup, branch prediction, locale checks.
+</span><span style="color:#81a1c1;">int</span><span> val </span><span style="color:#81a1c1;">= </span><span style="color:#88c0d0;">atoi</span><span>(ptr)</span><span style="color:#eceff4;">;
+</span><span>
+</span><span style="color:#616e88;">// the specialized way
+</span><span style="color:#616e88;">// overhead: none really, just a few instructions that the CPU can blaze through
+</span><span style="color:#81a1c1;">int</span><span> val </span><span style="color:#81a1c1;">= </span><span>(ptr[</span><span style="color:#b48ead;">0</span><span>] </span><span style="color:#81a1c1;">- </span><span style="color:#a3be8c;">&#39;0&#39;</span><span>) </span><span style="color:#81a1c1;">* </span><span style="color:#b48ead;">10 </span><span style="color:#81a1c1;">+ </span><span>(ptr[</span><span style="color:#b48ead;">1</span><span>] </span><span style="color:#81a1c1;">- </span><span style="color:#a3be8c;">&#39;0&#39;</span><span>)</span><span style="color:#eceff4;">;
+</span></code></pre>
+<h2 id="2-make-it-cache-friendly">2. Make it cache friendly</h2>
+<p>This is where the meat of the matter is. Think about the data writes and reads, both on temporal and spatial axes.
+Every load and store needs to be accounted for and studied. Is it needed, where does it write, when should it write, are there any similarly pointed writes/reads?
+Similarly for reads, consider not just the location in the code, but the memory location it concerns.</p>
+<p>To put it plainly, try to access data that's either close to data you've already accessed or data that you've recently accessed.</p>
+<p>If you algorithm is just accessing a part of your data, e.g. you have an array of structs and you're only acessing the first 8 bytes of a 128 byte struct, you're wasting a lot of cpu. Separate out the relevant data and process it independently. The relevant data stays hot in cache and you reap the benefits.</p>
+<p>One nice trick is if you're writing to a location that you know you won't access soon, you can use streaming non-temporal writes/stores (<code>_mm_stream_XX</code> intrinsics in x86).
+Using them allows the CPU to bypass the data caches and speed up the whole process. Useful for constricted memory bandwidth as well.</p>
+<p>Once you've done all that (or ideally before, premature optimization is not a thing here in this blog. Improperly granulated optimization on the other hand, is),
+you can see what the actual values will be for each piece of data and compress the types if possible. Saves space, you can keep more data in cache and thus speed up the whole thing.</p>
+<p>Structure padding can also be a significant factor. Take a look at this example, generated by a very useful tool called <code>pahole</code>.</p>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#81a1c1;">struct </span><span style="color:#8fbcbb;">bad_order </span><span>{
+</span><span>	</span><span style="color:#81a1c1;">char</span><span>                       c</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*     0     1 */
+</span><span>
+</span><span>	</span><span style="color:#616e88;">/* XXX 7 bytes hole, try to pack */
+</span><span>
+</span><span>	</span><span style="color:#81a1c1;">double</span><span>                     d</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*     8     8 */
+</span><span>	</span><span style="color:#81a1c1;">int</span><span>                        i</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*    16     4 */
+</span><span>
+</span><span>	</span><span style="color:#616e88;">/* size: 24, cachelines: 1, members: 3 */
+</span><span>	</span><span style="color:#616e88;">/* sum members: 13, holes: 1, sum holes: 7 */
+</span><span>	</span><span style="color:#616e88;">/* padding: 4 */
+</span><span>	</span><span style="color:#616e88;">/* last cacheline: 24 bytes */
+</span><span>}</span><span style="color:#eceff4;">;
+</span></code></pre>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#81a1c1;">struct </span><span style="color:#8fbcbb;">good_order </span><span>{
+</span><span>	</span><span style="color:#81a1c1;">double</span><span>                     d</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*     0     8 */
+</span><span>	</span><span style="color:#81a1c1;">int</span><span>                        i</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*     8     4 */
+</span><span>	</span><span style="color:#81a1c1;">char</span><span>                       c</span><span style="color:#eceff4;">;                    </span><span style="color:#616e88;">/*    12     1 */
+</span><span>
+</span><span>	</span><span style="color:#616e88;">/* size: 16, cachelines: 1, members: 3 */
+</span><span>	</span><span style="color:#616e88;">/* padding: 3 */
+</span><span>	</span><span style="color:#616e88;">/* last cacheline: 16 bytes */
+</span><span>}</span><span style="color:#eceff4;">;
+</span></code></pre>
+<p>As seen above, even though <code>bad_order</code> has the same members as <code>good_order</code>, it is 8 bytes larger simply due to the ordering of members.<br />
+In practice, on x86-64, this means that you can fit 4 <code>good_order</code> structs in a 64bit cache line, whereas you can fit only 2 <code>bad_order</code> structs (with one spilling over).<br />
+Which is a bit bonkers if you think about it, simply reordering a few lines in an editor can take off a good chunk of a runtime (depending on the algorithm of course).</p>
+<p>You can use <code>__attribute__((packed))</code> instead of manually reordering members, but I'd only use it for protocol/storage use as unaligned members can cause issues on some architectures, so just one more thing to keep in mind.</p>
+<p>Finally, if you're in a loop where you know exactly which next adresses you're going to access (provided it's not a simple strided memory access pattern), you can use software prefetching instructions (<code>__builtin_prefetch</code> intrinsic in x86). But again, unless it's a highly unpredictable (for the pretty good hardware prefetchers of the modern CPUs), you should just trust the CPU.</p>
+<h2 id="3-make-it-simd">3. Make it SIMD</h2>
+<p>Vectorizing an algorithm can in some simpler cases come as a result of the step above, as the result is usually a serial processing of data, which is highly amenable to vectorization (and paralellization). In that case, simply grouping the data in 8/16/32 wide groups and using vector instructions to process them can be enough.<br />
+In those cases, what can also happen as well is autovectorization, where the compiler will happily recognize that a loop vectorizable and do the whole process for you.</p>
+<p>In other cases, you have to take a good hard look at what your algorithm is doing, separate out independent streams of data processing, rearrange the data to fit the vectorized version so it's laid out nicely and contiguously for the SIMD instructions to speed through, and try to vectorize the whole loop(s). If you have some complex data movement going on, it can be a challenge to shuffle and permute all the bytes around, but a fun challenge nonetheless.</p>
+<p>One thing to be aware of is that not all instruction sets are available on all CPUs microarchitectures (looking at you Intel with AVX512) and thus code that you write can just 
+segfault on some machines. To avoid it, just simply branch based on the CPU feature set with a common fallback.</p>
+<p>For autovectorization, you can use <a href="https://gcc.gnu.org/onlinedocs/gcc/Function-Multiversioning.html">function multiversioning</a> which automatically does all that for you. It makes multiple copies of a function for each target and branches on each call, very nifty.<br />
+Example:</p>
+<pre data-lang="c" style="background-color:#2e3440;color:#d8dee9;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#81a1c1;">__attribute__</span><span>((target_clones(</span><span style="color:#a3be8c;">&quot;avx512f&quot;</span><span style="color:#eceff4;">, </span><span style="color:#a3be8c;">&quot;avx2&quot;</span><span style="color:#eceff4;">, </span><span style="color:#a3be8c;">&quot;default&quot;</span><span>)))
+</span><span style="color:#81a1c1;">void </span><span style="color:#88c0d0;">process_data</span><span>(</span><span style="color:#81a1c1;">float* </span><span>data</span><span style="color:#eceff4;">, </span><span style="color:#81a1c1;">int </span><span>count) {
+</span><span>    </span><span style="color:#81a1c1;">for </span><span>(</span><span style="color:#81a1c1;">int</span><span> i </span><span style="color:#81a1c1;">= </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">;</span><span> i </span><span style="color:#81a1c1;">&lt;</span><span> count</span><span style="color:#eceff4;">; </span><span style="color:#81a1c1;">++</span><span>i) {
+</span><span>        data[i] </span><span style="color:#81a1c1;">=</span><span> data[i] </span><span style="color:#81a1c1;">* </span><span style="color:#b48ead;">0</span><span style="color:#eceff4;">.</span><span style="color:#b48ead;">5</span><span style="color:#81a1c1;">f</span><span style="color:#eceff4;">;
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>For more information on this (and data-oriented design in general), research SoA(structures of arrays) and AoSoA (arrays of structures of arrays).
+This could honestly be a whole series of blog posts, so just for the sake of terseness, take a look at the materials section at the bottom for sources.</p>
+<h2 id="4-make-it-parallel">4. Make it parallel</h2>
+<p>So now, parallelization at this stage should come at no cost, you've already separated out the data processing in independent streams, parallelizing should be just a matter of using <code>OpenMP</code> and <code>rayon</code> in case of C/C++ and Rust. Combined with the above steps, this should easily net you two orders of magnitude worth of speedup.</p>
+<p>One thing you should be aware of however, is <a href="https://en.wikipedia.org/wiki/False_sharing">false sharing</a>.<br />
+In short, if you have multiple threads accessing a single cache line, it'll trigger a memory stall and a load from RAM.<br />
+Ironically, it can be fixed by adding padding, which makes less data fit in the cache, but enables the paralellization to do its thing. Thus a net positive.
+Small example:</p>
+<pre data-lang="cpp" style="background-color:#2e3440;color:#d8dee9;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#81a1c1;">struct </span><span style="color:#8fbcbb;">packed </span><span>{
+</span><span>    std</span><span style="color:#81a1c1;">::</span><span>atomic&lt;</span><span style="color:#8fbcbb;">int64_t</span><span>&gt; a</span><span style="color:#eceff4;">;
+</span><span>    std</span><span style="color:#81a1c1;">::</span><span>atomic&lt;</span><span style="color:#8fbcbb;">int64_t</span><span>&gt; b</span><span style="color:#eceff4;">; 
+</span><span>}</span><span style="color:#eceff4;">;
+</span><span>
+</span><span style="color:#81a1c1;">struct </span><span style="color:#8fbcbb;">padded </span><span>{
+</span><span>    std</span><span style="color:#81a1c1;">::</span><span>atomic&lt;</span><span style="color:#8fbcbb;">int64_t</span><span>&gt; a</span><span style="color:#eceff4;">;
+</span><span>    </span><span style="color:#616e88;">// force &quot;b&quot; onto a new cache line
+</span><span>    </span><span style="color:#81a1c1;">alignas</span><span>(</span><span style="color:#b48ead;">64</span><span>) std</span><span style="color:#81a1c1;">::</span><span>atomic&lt;</span><span style="color:#8fbcbb;">int64_t</span><span>&gt; b</span><span style="color:#eceff4;">; 
+</span><span>}</span><span style="color:#eceff4;">;
+</span></code></pre>
+<p>In the <code>packed</code> struct, both members fit in a single cache line and will therefore exhibit false sharing in a multithreaded scenario.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>That is more or less it. Note that this list is not applicable in every case (how on earth would you parallelise an interpreter) nor does it have every optimization worth doing (rewriting a subroutine in assembly for example).</p>
+<p>It should cover most of it though as, with programming, all we're doing is shuffling data from end to the other with some transformation in between.</p>
+<h2 id="how-do-gc-scripting-languages-fit-in">How do GC/scripting languages fit in?</h2>
+<p>Short answer - they don't.</p>
+<p>Long answer - it depends. It depends on the language and its support for value types and the ability to control the data layout.</p>
+<ul>
+<li>
+<p>Java has Project Valhalla, which is an unreleased experimental project to add value types to Java.</p>
+</li>
+<li>
+<p>Go is solid all-around, but writing vectorized code often (ideally) requires writing go assembly.</p>
+</li>
+<li>
+<p>Python defers any perf-related code to C/C++.</p>
+</li>
+<li>
+<p>Lua similarly should not be used to implement perf-sensitive parts of a program, which its embeddable nature supports quite naturally.</p>
+</li>
+<li>
+<p>C# has an awesome situation in here with its support for value types (ref structs), slices (spans), stack allocation, SIMD intrinsics (including AVX512!).
+You can even go bare-metal and GC-free with <a href="https://flattened.net/">bflat</a>.</p>
+</li>
+</ul>
+<p>Despite the outliers, if you truly have non-IO-bottlenecked, data-intensive code that needs to run as fast as possible, systems languages like C/C++/Rust are your best bet.</p>
+<h2 id="profiling">Profiling</h2>
+<p>Before doing anything - <strong>profile</strong>. </p>
+<p>Sometimes you can intuit where the bottleneck is, but most of the time, you would be surprised at the real place the algorithm falls apart.
+Sometimes it won't be a single bottleneck, maybe it'll be spread out over multiple places (worst case scenario being the flat profile where program time is roughly evenly distributed).</p>
+<p>A lot of it depends on not only understanding low-level programming but the domain that you're working with.<br />
+There's only so much you can optimize without enough information on what that specific algorithm/code/subsystem is supposed to be doing, rather than what it is actually (slowly) doing.</p>
+<p>Also, once the lowest-hanging fruit has been picked, we're not talking just function, but instruction-level profiling as well where, depending on the machine, you can be frontend-bound, backend-bound, memory-bound... a whole new world opens up.<br />
+See VTune <a href="https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/cpu-metrics-reference.html">metrics</a> and <a href="https://www.intel.com/content/www/us/en/docs/vtune-profiler/cookbook/2025-0/top-down-microarchitecture-analysis-method.html">analysis</a> guides, lots of useful stuff in there.</p>
+<h2 id="useful-tools-material">Useful tools &amp; material</h2>
+<ul>
+<li>hyperfine - benchmarking</li>
+<li>perf - profiling (ETW for windows)</li>
+<li>VTune - in-depth profiling</li>
+<li>DTrace - profiling, debugging, tracing</li>
+<li>Cachegrind - cache tracing</li>
+<li>Perfetto - tracing visualization</li>
+<li><a href="https://www.godbolt.org">godbolt.org</a> - a fantastic website where you can see in-detail how you code gets compiled down to assembly (plus analysis and various tools)</li>
+</ul>
+<p>The now legendary intro to data-oriented design: <a href="https://www.youtube.com/watch?v=rX0ItVEVjHc">CppCon 2014: Mike Acton &quot;Data-Oriented Design and C++&quot;</a></p>
+<p>Much more about data-oriented design: <a href="https://www.dataorienteddesign.com/dodbook/">www.dataorienteddesign.com/dodbook</a></p>
+<p>An in-depth overview of performance analysis and optimization: <a href="https://www.amazon.com/Performance-Analysis-Tuning-Modern-CPUs-ebook/dp/B0DDV3J9Y4?ref_=ast_author_dp&amp;th=1&amp;psc=1.">Performance Analysis and Tuning on Modern CPUs by Denis Bakhvalov</a></p>
+
+  </div>
+
+	
+
+  <div class="pagination">
+  	
+		<a href="#" class="top">Top</a>
+		
+  </div>
+
+  </main>
+
+  
+  <footer>
+
+  </footer>
+  
+</body>
+</html>
